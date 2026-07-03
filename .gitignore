@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+server/__pycache__/
+server/dados/*.json
+node_modules/
+test_*.js
+temp_check.js
+index_original.html
+*.log
+.env
