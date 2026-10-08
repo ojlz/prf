@@ -8,3 +8,4 @@ temp_check.js
 index_original.html
 *.log
 .env
+.vercel

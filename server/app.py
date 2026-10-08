@@ -19,7 +19,13 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'prf-simulator-change-in
 CORS(app, supports_credentials=True)
 limiter = Limiter(app=app, key_func=lambda: request.remote_addr)
 
-DADOS = os.path.join(os.path.dirname(__file__), 'dados')
+DADOS = os.environ.get("PRF_DATA_DIR", os.path.join(os.path.dirname(__file__), 'dados'))
+BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+# No Vercel os estaticos vao para public/ (CDN); localmente continua igual.
+# Fallback para a raiz mantem compatibilidade com checkouts antigos.
+_PUBLIC_DIR = os.path.join(BASE_DIR, 'public')
+STATIC_DIR = os.environ.get("PRF_STATIC_DIR",
+             _PUBLIC_DIR if os.path.isdir(_PUBLIC_DIR) else BASE_DIR)
 USUARIOS = os.path.join(DADOS, 'usuarios.json')
 BLACKLIST = os.path.join(DADOS, 'tokens_blacklist.json')
 os.makedirs(DADOS, exist_ok=True)
@@ -171,7 +177,7 @@ def conta_padrao(usuario, email_hash):
 
 @app.route('/')
 def servir_index():
-    return send_from_directory('../', 'index.html')
+    return send_from_directory(STATIC_DIR, 'index.html')
 
 @app.route('/<path:nome>', methods=['GET', 'POST'])
 def servir_estatico(nome):
@@ -179,7 +185,7 @@ def servir_estatico(nome):
         return jsonify({"erro": "Acesso negado"}), 403
     if nome.startswith('cdn-cgi/'):
         return jsonify({"erro": "Not found"}), 404
-    return send_from_directory('../', nome)
+    return send_from_directory(STATIC_DIR, nome)
 
 
 # ---- Auth routes ----
