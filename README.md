@@ -1,33 +1,33 @@
 # PRF na Estrada — Simulador Educacional (CTB)
 
-🌐 **Jogue no ar:** https://prf-pxzys-projects.vercel.app
+🌐 **Jogue no ar:** https://prfgame.vercel.app
 
-Jogo de simulador/quiz com contas, patentes por XP, conquistas, skins,
-ranking e patrulhas. Frontend em `public/index.html` + API Flask em
-`server/app.py`.
+Jogo de simulador/quiz 100% no navegador, sem cadastro: patrulhe a BR,
+enquadre infrações do CTB, ganhe pontos e desbloqueie fardas, viaturas e
+equipamentos. Progresso, carteira de pontos e personalização ficam salvos
+no `localStorage`. Sem login, sem ranking, sem XP/patentes, sem conquistas.
 
-## Como roda na Vercel (sem mudar o jogo)
+## Como roda na Vercel
 
-- A Vercel detecta o Flask e atende **toda requisição** pela função
-  `api/index.py`, que só importa o app original de `server/app.py`.
-- Estáticos (`index.html`, `assets/`) ficam em `public/` e saem pela CDN.
-- Contas/ranking usam JSON em disco: na Vercel vai para `/tmp`
-  (`PRF_DATA_DIR`), que é **efêmero** — zera entre deploys/instâncias.
-  Localmente continua em `server/dados/` (ignorado pelo git).
+Site estático puro: `public/index.html` + `public/assets/` saídos pela CDN.
+O Flask em `server/` **não** vai para o deploy (só existe para referência
+local/histórico) — o `pyproject.toml` declara o entrypoint para o preset,
+mas nenhuma rota da API é usada pelo jogo.
 
-## Rodar local (igual a antes)
+## Rodar local
+
+Só abrir `public/index.html` no navegador, ou servir a pasta:
 
 ```bash
-pip install -r requirements.txt
-python server/app.py
+cd public && python -m http.server 8000
 ```
 
-Abra http://127.0.0.1:5000 (ou o `index.html` via `file://`, que usa a API
-local). O `server/app.py` serve `public/` com fallback para a raiz, então
-checkouts antigos continuam funcionando.
+(Opcional/legado: `pip install -r server/requirements.txt` +
+`python server/app.py` — o servidor serve `public/` com fallback para a
+raiz, mas o jogo não precisa dele.)
 
-## Notas de demo
+## Estrutura
 
-- Defina `SECRET_KEY` nas envs da Vercel em produção (o padrão do código é
-  só para demonstração).
-- `server/dados/*.json` nunca é commitado (ver `.gitignore`).
+- `public/index.html` — o jogo completo (HTML + CSS + JS)
+- `public/assets/` — sprites da pista
+- `server/` — backend Flask original, desativado no deploy (referência)

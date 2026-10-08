@@ -555,11 +555,11 @@
 <section id="comoJogar" style="padding:20px;background:var(--painel);border-bottom:2px solid var(--borda)">
   <h2 style="color:var(--amarelo);font-size:14px;text-align:center;margin-bottom:16px">╔══ COMO JOGAR ══╗</h2>
   <div style="max-width:600px;margin:0 auto;font-size:9px;color:#b0c4de;line-height:2">
-    <p><b style="color:var(--amarelo)">1.</b> Crie sua conta ou faça login (gratuito).</p>
+    <p><b style="color:var(--amarelo)">1.</b> Clique em JOGAR AGORA — direto no navegador, sem cadastro.</p>
     <p><b style="color:var(--amarelo)">2.</b> Na rodovia, use <b>WASD</b> para dirigir, <b>ESPAÇO</b> para buzinar, e pare o veículo fiscalizado.</p>
     <p><b style="color:var(--amarelo)">3.</b> Ao se aproximar de um veículo, <b>clique na cena</b> para ler a situação e escolha a infração correta do CTB.</p>
     <p><b style="color:var(--amarelo)">4.</b> Use <b>1-6</b> para itens da hotbar (radar, cone, K-9). <b>R</b> para rádio de ocorrência.</p>
-    <p><b style="color:var(--amarelo)">5.</b> Acuse corretamente para ganhar pontos e XP. Suba de patente e desbloqueie equipamentos!</p>
+    <p><b style="color:var(--amarelo)">5.</b> Acuse corretamente para ganhar pontos. Use os pontos para desbloquear fardas, viaturas e equipamentos!</p>
     <p style="text-align:center;margin-top:12px;color:#67779a;font-size:8px">CTB completo — 70+ situações reais de fiscalização. Treine para o concurso da PRF.</p>
   </div>
 </section>
@@ -703,7 +703,7 @@
   </section>
 
   <section class="secao centro">
-    <button class="btn-jogar" id="btnJogarRodape">&#9654; JOGAR AGORA<span class="gratis">GRÁTIS COM CONTA &middot; NO NAVEGADOR</span></button>
+    <button class="btn-jogar" id="btnJogarRodape">&#9654; JOGAR AGORA<span class="gratis">GRÁTIS &middot; SEM CADASTRO &middot; NO NAVEGADOR</span></button>
   </section>
 
   <footer class="rodape-site">
@@ -3504,6 +3504,8 @@ function planoPago() { return true; }
 /* ---------- SKINS: posse / liberação / aplicação ---------- */
 function possuiNaConta(id) {
   if (id === "moto_prf") return true;
+  if (typeof carteiraLocal !== "undefined" && carteiraLocal && Array.isArray(carteiraLocal.posse)
+            && carteiraLocal.posse.includes(id)) return true;
   return !!(contaAtual && contaAtual.skins && Array.isArray(contaAtual.skins.posse)
             && contaAtual.skins.posse.includes(id));
 }
@@ -3516,7 +3518,7 @@ function skinLiberadaLocal(skin) {
   if (!skin) return false;
   const d = skin.desbloqueio;
   if (d.tipo === "free") return true;
-  if (d.tipo === "nivel") return (contaAtual ? contaAtual.nivel : 1) >= d.nivel;
+  if (d.tipo === "nivel") return true; // sem progressão de conta: nível sempre liberado
   if (d.tipo === "pontos") return possuiNaConta(skin.id);
   // pago: liberado pelo PACOTE ou pelo id individual na posse (ou DLC Steam)
   if (d.tipo === "pago") return possuiPacote(d.pacote) || possuiNaConta(skin.id);
@@ -3527,13 +3529,21 @@ function skinLiberadaLocal(skin) {
   if (d.tipo === "sazonal") return possuiNaConta(skin.id);
   return false;
 }
-function pontosConta() { return (contaAtual && Number.isFinite(contaAtual.pontos)) ? contaAtual.pontos : 0; }
+/* Carteira LOCAL (sem conta): pontos e posse ficam salvos no navegador. */
+const CHAVE_CARTEIRA = "prfnaestrada_carteira";
+function carregarCarteira() { try { return JSON.parse(localStorage.getItem(CHAVE_CARTEIRA)) || {}; } catch (_e) { return {}; } }
+function salvarCarteira(c) { try { localStorage.setItem(CHAVE_CARTEIRA, JSON.stringify(c)); } catch (_e) {} }
+let carteiraLocal = carregarCarteira();
+if (!Number.isFinite(carteiraLocal.pontos)) carteiraLocal.pontos = 0;
+if (!Array.isArray(carteiraLocal.posse)) carteiraLocal.posse = [];
+function pontosConta() { return carteiraLocal.pontos; }
+aplicarSkinsDaConta();
+atualizarHeaderConta(); // esconde ENTRAR/CRIAR CONTA e demais itens de conta no boot
 
 /* PRÓXIMA META (progressão visível): aponta o item de jogabilidade (cone, radar,
    K-9...) que o jogador está MAIS perto de desbloquear, e quanto falta. Devolve
    "" quando tudo já foi liberado. */
 function proximaMetaTexto() {
-  const nivel = contaAtual ? contaAtual.nivel : 1;
   const pts = pontosConta();
   let melhor = null;
   for (const it of ITENS) {
@@ -3541,8 +3551,7 @@ function proximaMetaTexto() {
     const d = it.desbloqueio;
     if (!d || d.tipo !== "pontos") continue;
     let cand;
-    if (nivel < d.nivel) cand = { it, txt: `suba ao nível ${d.nivel}`, dist: (d.nivel - nivel) * 1e6 + Math.max(0, d.preco - pts) };
-    else if (pts < d.preco) cand = { it, txt: `faltam ${d.preco - pts} pts`, dist: d.preco - pts };
+    if (pts < d.preco) cand = { it, txt: `faltam ${d.preco - pts} pts`, dist: d.preco - pts };
     else cand = { it, txt: `JÁ DÁ PARA COMPRAR (${d.preco} pts) na loja de utilitários!`, dist: -1 };
     if (!melhor || cand.dist < melhor.dist) melhor = cand;
   }
@@ -3576,8 +3585,8 @@ function esc(t) {
 function atualizarHeaderConta() {
   const chip = document.getElementById("chipUsuario");
   const logado = !!contaAtual;
-  document.getElementById("btnAbrirLogin").classList.toggle("oculto", logado);
-  document.getElementById("btnAbrirConta").classList.toggle("oculto", logado);
+  document.getElementById("btnAbrirLogin").classList.add("oculto");
+  document.getElementById("btnAbrirConta").classList.add("oculto");
   document.getElementById("btnSairConta").classList.toggle("oculto", !logado);
   document.getElementById("btnAbrirPerfil").classList.toggle("oculto", !logado);
   // Botão ADMIN: só para a conta administradora (no site E dentro do jogo)
@@ -3802,7 +3811,6 @@ function ehSteam() { return document.documentElement.dataset.plataforma === "ste
 
 function abrirLojaSkins() {
   if (overlaySkins.classList.contains("aberta")) return;
-  if (!contaAtual) { avisar("Faça login para usar o vestiário."); return; }
   renderAbasLoja();
   trocarAbaLoja("farda");
   overlaySkins.classList.add("aberta");
@@ -4005,8 +4013,6 @@ function estadoSkin(skin, equipadaId) {
     return { liberada, equipada, label: "EQUIPAR", acao: () => equiparSkin(skin) };
   }
   if (d.tipo === "pontos") {
-    const nivelOk = (contaAtual ? contaAtual.nivel : 1) >= d.nivel;
-    if (!nivelOk) return { liberada, equipada, label: `NÍVEL ${d.nivel} · ${d.preco} pts`, acao: null };
     return { liberada, equipada, label: `COMPRAR · ${d.preco} pts`, acao: () => comprarSkinPontos(skin) };
   }
   if (d.tipo === "pago") {
@@ -4015,7 +4021,7 @@ function estadoSkin(skin, equipadaId) {
     if (ehSteam())
       return { liberada, equipada, label: "COMPRAR NA STEAM",
                acao: () => avisarLoja("Compre como DLC na página da Steam.") };
-    return { liberada, equipada, label: `R$ ${precoBR(preco)} · PIX`, acao: () => comprarPacote(d.pacote) };
+    return { liberada, equipada, label: "INDISPONÍVEL NA DEMO", acao: null };
   }
   if (d.tipo === "beta")
     return { liberada, equipada, label: "EXCLUSIVA BETA", acao: null };
@@ -4055,7 +4061,7 @@ function cardBase(previewFn, item, st) {
 
 function renderLoja() {
   document.getElementById("lojaSaldo").innerHTML =
-    `Pontos: <b>${pontosConta()}</b> · Nível <b>${contaAtual ? contaAtual.nivel : 1}</b>` +
+    `Pontos: <b>${pontosConta()}</b>` +
     (contaAtual && contaAtual.beta ? ` · <b style="color:var(--verde)">FUNDADOR BETA</b>` : "");
   const grade = document.getElementById("lojaGrade");
   grade.innerHTML = "";
@@ -4093,7 +4099,7 @@ function cardPacote(id, pac) {
   const btn = document.createElement("button"); btn.className = "botao";
   if (possui) { btn.textContent = "EQUIPAR PACOTE"; btn.addEventListener("click", () => equiparPacote(pac)); }
   else if (ehSteam()) { btn.textContent = "COMPRAR NA STEAM"; btn.disabled = true; }
-  else { btn.textContent = `R$ ${precoBR(pac.preco)} · PIX`; btn.addEventListener("click", () => comprarPacote(id)); }
+    else { btn.textContent = "INDISPONÍVEL NA DEMO"; btn.disabled = true; }
   card.appendChild(btn);
   return card;
 }
@@ -4129,17 +4135,11 @@ function tipoDaSkin(skin) {
   if (ITENS_MAP[skin.id]) return "item";
   return "farda";
 }
-async function equiparSkin(skin) {
+function equiparSkin(skin) {
   const tipo = tipoDaSkin(skin);
   const campo = EQUIP_CAMPO[tipo];
   if (campo) estado[campo] = skin.id;   // aplica já
-  try {
-    const r = await chamarApi("skin/equipar", "POST", { id: skin.id });
-    contaAtual = r.conta;
-    if (EQUIP_LS[tipo]) localStorage.removeItem(EQUIP_LS[tipo]);
-  } catch (_e) {
-    if (EQUIP_LS[tipo]) localStorage.setItem(EQUIP_LS[tipo], skin.id); // ex.: DLC Steam
-  }
+  if (EQUIP_LS[tipo]) { try { localStorage.setItem(EQUIP_LS[tipo], skin.id); } catch (_e) {} }
   renderLojaAtual();
 }
 async function equiparPacote(pac) {
@@ -4149,15 +4149,15 @@ async function equiparPacote(pac) {
   }
   avisarLoja("Pacote equipado!");
 }
-async function comprarSkinPontos(skin) {
-  avisarLoja("Processando compra...");
-  try {
-    const r = await chamarApi("skin/comprar-pontos", "POST", { id: skin.id });
-    contaAtual = r.conta;
-    aplicarSkinsDaConta();
-    avisarLoja(r.mensagem || `${skin.nome} desbloqueada!`);
-    renderLojaAtual();
-  } catch (e) { avisarLoja(e.message, true); }
+function comprarSkinPontos(skin) {
+  const preco = (skin.desbloqueio && skin.desbloqueio.preco) || 0;
+  if ((carteiraLocal.pontos || 0) < preco) { avisarLoja(`Faltam ${preco - (carteiraLocal.pontos || 0)} pts.`, true); return; }
+  carteiraLocal.pontos -= preco;
+  if (!carteiraLocal.posse.includes(skin.id)) carteiraLocal.posse.push(skin.id);
+  salvarCarteira(carteiraLocal);
+  aplicarSkinsDaConta();
+  avisarLoja(`${skin.nome} desbloqueada!`);
+  renderLojaAtual();
 }
 // fecha a loja aberta ANTES de abrir o PIX (senão o PIX fica atrás da janela)
 function comprarPacote(produto) { fecharLojaSkins(); fecharLojaArmas(); } // ponytail: PIX removed
@@ -4169,7 +4169,6 @@ const overlayArmas = document.getElementById("overlayArmas");
 let modoLojaArmas = "armas";   // "armas" (fuzis) | "util" (cone/radar) — mesmo overlay
 function abrirLojaArmas() {
   if (overlayArmas.classList.contains("aberta")) return;
-  if (!contaAtual) { avisar("Faça login para usar a loja de armas."); return; }
   modoLojaArmas = "armas";
   document.getElementById("tituloArmas").innerHTML = "&#128299; LOJA DE ARMAS";
   renderArmas();
@@ -4177,7 +4176,6 @@ function abrirLojaArmas() {
 }
 function abrirLojaUtilitarios() {
   if (overlayArmas.classList.contains("aberta")) return;
-  if (!contaAtual) { avisar("Faça login para usar os utilitários."); return; }
   modoLojaArmas = "util";
   document.getElementById("tituloArmas").innerHTML = "&#128679; LOJA DE UTILITÁRIOS";
   renderArmas();
@@ -4187,7 +4185,7 @@ function fecharLojaArmas() { overlayArmas.classList.remove("aberta"); limparMsg(
 function renderArmas() {
   const meta = modoLojaArmas === "util" ? proximaMetaTexto() : "";
   document.getElementById("armasSaldo").innerHTML =
-    `Pontos: <b>${pontosConta()}</b> · Nível <b>${contaAtual ? contaAtual.nivel : 1}</b>` +
+    `Pontos: <b>${pontosConta()}</b>` +
     (meta ? `<br><span style="color:var(--amarelo); font-size:9px">${meta}</span>` : "");
   const grade = document.getElementById("armasGrade");
   grade.innerHTML = "";
@@ -4245,7 +4243,7 @@ function renderArmario() {
 
   // ----- ACESSÓRIOS (grade de quadradinhos; compra com PONTOS, veste/tira) -----
   document.getElementById("armarioSaldo").innerHTML =
-    `Pontos: <b>${pontosConta()}</b> &middot; Nível <b>${contaAtual ? contaAtual.nivel : 1}</b>`;
+    `Pontos: <b>${pontosConta()}</b>`;
   document.getElementById("armarioMsg").textContent = armarioMsg || "";
   const grade = document.getElementById("armarioGrade");
   grade.innerHTML = "";
@@ -4274,10 +4272,8 @@ function cardAcessorio(aces, ap) {
     btn.textContent = vestido ? "TIRAR" : "VESTIR";
     btn.onclick = () => { alternarAcessorio(aces); armarioMsg = ""; renderArmario(); };
   } else {
-    const nivel = contaAtual ? contaAtual.nivel : 1;
-    if (nivel < aces.nivel) { btn.textContent = `NÍVEL ${aces.nivel} · ${aces.preco} pts`; btn.disabled = true; }
-    else { btn.textContent = `COMPRAR · ${aces.preco} pts`; btn.disabled = pontosConta() < aces.preco;
-           btn.onclick = () => comprarAcessorioPontos(aces); }
+    { btn.textContent = `COMPRAR · ${aces.preco} pts`; btn.disabled = pontosConta() < aces.preco;
+      btn.onclick = () => comprarAcessorioPontos(aces); }
   }
   card.appendChild(btn);
   return card;
@@ -4296,19 +4292,19 @@ function alternarAcessorio(aces) {
   }
   salvarAparencia();
 }
-/* Compra o acessório com PONTOS (validado/persistido no servidor, como as skins). */
-async function comprarAcessorioPontos(aces) {
-  if (!contaAtual) { armarioMsg = "Faça login para comprar."; renderArmario(); return; }
-  armarioMsg = "Processando compra...";
-  renderArmario();
-  try {
-    const r = await chamarApi("skin/comprar-pontos", "POST", { id: aces.id });
-    contaAtual = r.conta;
-    alternarAcessorio(aces);                 // já veste o recém-comprado
-    armarioMsg = `${aces.nome} comprado e equipado!`;
-  } catch (e) {
-    armarioMsg = e.message;
+/* Compra o acessório com PONTOS da carteira local. */
+function comprarAcessorioPontos(aces) {
+  const preco = aces.preco || 0;
+  if ((carteiraLocal.pontos || 0) < preco) {
+    armarioMsg = `Faltam ${preco - (carteiraLocal.pontos || 0)} pts.`;
+    renderArmario();
+    return;
   }
+  carteiraLocal.pontos -= preco;
+  if (!carteiraLocal.posse.includes(aces.id)) carteiraLocal.posse.push(aces.id);
+  salvarCarteira(carteiraLocal);
+  alternarAcessorio(aces);                 // já veste o recém-comprado
+  armarioMsg = `${aces.nome} comprado e equipado!`;
   renderArmario();
 }
 document.getElementById("btnFecharArmario").addEventListener("click", fecharArmario);
@@ -10713,7 +10709,7 @@ function acervoHtml() {
    (pontuação, km e tempo de direção em UMA patrulha), XP e nível */
 async function sincronizarPatrulha(gameOver) {
   const el = document.getElementById("syncFim");
-  if (!contaAtual) { el.style.display = "block"; salvarProgressoLocal(); el.innerHTML = "Progresso salvo no navegador. Crie uma conta para manter os dados em qualquer dispositivo."; return; }
+  if (!contaAtual) { el.style.display = "block"; salvarProgressoLocal(); const ganho = Math.max(0, Math.floor((estado.recordePontos || 0) / 10) + (estado.fiscalizacoes || 0) + (estado.prisoes || 0) * 2); carteiraLocal.pontos = (carteiraLocal.pontos || 0) + ganho; salvarCarteira(carteiraLocal); el.innerHTML = "Progresso salvo neste navegador. +" + ganho + " pts na carteira!"; return; }
   el.style.display = "block";
   el.style.borderColor = "var(--borda)";
   el.innerHTML = "Transmitindo relatório ao quartel-general...";

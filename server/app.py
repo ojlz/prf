@@ -28,7 +28,10 @@ STATIC_DIR = os.environ.get("PRF_STATIC_DIR",
              _PUBLIC_DIR if os.path.isdir(_PUBLIC_DIR) else BASE_DIR)
 USUARIOS = os.path.join(DADOS, 'usuarios.json')
 BLACKLIST = os.path.join(DADOS, 'tokens_blacklist.json')
-os.makedirs(DADOS, exist_ok=True)
+try:
+    os.makedirs(DADOS, exist_ok=True)
+except OSError:
+    pass  # disco somente-leitura (ex.: serverless): dados vão para /tmp via PRF_DATA_DIR
 
 ACCESS_EXP = 3600
 REFRESH_EXP = 2592000
