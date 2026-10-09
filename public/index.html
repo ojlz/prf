@@ -9111,39 +9111,112 @@ function desenharViaturaEm(cx, cy, opts, tempo) {
   // Skin FUSCA: carroceria arredondada (visão de cima) — desenho próprio
   if (skin.formato === "fusca") { desenharFuscaEm(cx, cy, l, a, corBase, AMARELO, skin, opts, tempo); return; }
 
-  px(x + 2, y + a - 2, l - 4, 3, "#00000044");
-  px(x, y + 4, l, a - 8, corBase);
-  px(x + 3, y, l - 6, a, corBase);
-  px(x + 3, y + 2, 3, a - 4, "#ffffff1c");
-
-  // Faixas amarelas longitudinais nas laterais (grafismo PRF)
-  px(x, y + 10, 3, a - 26, AMARELO);
-  px(x + l - 3, y + 10, 3, a - 26, AMARELO);
-
-  // Chevron amarelo em diagonal sobre o capô
-  px(x + 6, y + 5, 6, 2, AMARELO);
-  px(x + 10, y + 3, 6, 2, AMARELO);
-  px(x + 14, y + 1, 6, 2, AMARELO);
-
-  // Vidros
-  px(x + 5, y + 8, l - 10, 9, "#0e1420");
-  px(x + 6, y + 9, l - 12, 3, "#2c405e");
-  px(x + 5, y + a - 16, l - 10, 8, "#0e1420");
+  const mod = opts.modelo || "sedan";
+  px(x + 2, y + a - 2, l - 4, 3, "#00000044");   // sombra
+  if (mod === "suv") {
+    // TRAILBLAZER: SUV alta, teto longo, rack e vidro traseiro amplo
+    px(x, y + 4, l, a - 8, corBase);
+    px(x + 3, y, l - 6, a, corBase);
+    px(x + 3, y + 2, 3, a - 4, "#ffffff1c");
+    px(x, y + 10, 3, a - 26, AMARELO);
+    px(x + l - 3, y + 10, 3, a - 26, AMARELO);
+    px(x + 5, y + 6, l - 10, 8, "#0e1420");      // para-brisa
+    px(x + 6, y + 7, l - 12, 2, "#2c405e");
+    px(x + 5, y + 16, l - 10, 16, "#0e1420");    // teto + vidro lateral duplo
+    px(x + 6, y + 17, l - 12, 3, "#2c405e");
+    px(x + 5, y + 34, l - 10, 10, "#0e1420");    // vigia traseiro amplo
+    px(x + 4, y + 14, l - 8, 2, "#3a4458");      // rack de teto
+    px(x + 4, y + 32, l - 8, 2, "#3a4458");
+    px(x + 6, y + 46, 6, 2, AMARELO);            // chevron no capô traseiro
+    px(x + 10, y + 48, 6, 2, AMARELO);
+  } else if (mod === "blindada") {
+    // SW4 BLINDADA: chapa reforçada, coluna grossa, grade e quebra-mato
+    px(x - 1, y + 4, l + 2, a - 8, corBase);
+    px(x + 2, y, l - 4, a, corBase);
+    px(x + 2, y + 2, 3, a - 4, "#ffffff14");
+    px(x - 1, y + 10, 3, a - 26, AMARELO);
+    px(x + l - 2, y + 10, 3, a - 26, AMARELO);
+    px(x + 5, y + 8, l - 10, 7, "#0e1420");
+    px(x + 5, y + 18, l - 10, 12, corBase);      // teto blindado (chapa, sem vidro)
+    px(x + 5, y + 18, l - 10, 2, "#3a4458");
+    px(x + 5, y + 32, l - 10, 8, "#0e1420");      // vigia traseiro estreito
+    px(x + 4, y + 2, l - 8, 4, "#3a4458");        // quebra-mato dianteiro
+    px(x + 4, y + 6, l - 8, 1, "#59637a");
+    px(x + 6, y + 5, 6, 2, AMARELO);
+    px(x + 14, y + 5, 6, 2, AMARELO);
+  } else if (mod === "interceptor") {
+    // INTERCEPTOR SEDÃ TURBO: rebaixado, saias, scoop no capô e asa traseira
+    px(x + 1, y + 4, l - 2, a - 8, corBase);
+    px(x + 4, y, l - 8, a, corBase);
+    px(x + 1, y + 12, 2, a - 28, "#0c0f14");      // saias laterais
+    px(x + l - 3, y + 12, 2, a - 28, "#0c0f14");
+    px(x, y + 10, 3, a - 26, AMARELO);
+    px(x + l - 3, y + 10, 3, a - 26, AMARELO);
+    px(x + l / 2 - 1, y + 4, 2, 10, "#0c0f14");   // scoop do turbo no capô
+    px(x + l / 2 - 1, y + 4, 2, 2, AMARELO);
+    px(x + 5, y + 8, l - 10, 8, "#0e1420");       // para-brisa inclinado
+    px(x + 6, y + 9, l - 12, 2, "#2c405e");
+    px(x + 5, y + a - 15, l - 10, 7, "#0e1420");
+    px(x + 2, y + a - 8, l - 4, 3, "#0c0f14");    // asa traseira
+    px(x + 4, y + a - 8, 3, 3, "#23262b");
+    px(x + l - 7, y + a - 8, 3, 3, "#23262b");
+    px(x + l / 2 - 4, y + 18, 8, 2, AMARELO);    // faixa do teto
+  } else if (mod === "patrulheira") {
+    // RANGER PICK-UP: cabine dupla + caçamba aberta com santo-antônio
+    px(x, y + 4, l, a - 8, corBase);
+    px(x + 3, y, l - 6, a, corBase);
+    px(x, y + 10, 3, 18, AMARELO);
+    px(x + l - 3, y + 10, 3, 18, AMARELO);
+    px(x + 5, y + 6, l - 10, 8, "#0e1420");       // para-brisa
+    px(x + 6, y + 7, l - 12, 2, "#2c405e");
+    px(x + 5, y + 16, l - 10, 10, "#0e1420");     // cabine dupla
+    px(x + 5, y + 17, 2, 8, "#2c405e");
+    px(x + l - 7, y + 17, 2, 8, "#2c405e");
+    px(x + 4, y + 14, 2, 12, "#3a4458");          // santo-antônio
+    px(x + l - 6, y + 14, 2, 12, "#3a4458");
+    px(x + 4, y + 28, l - 8, a - 34, "#00000055"); // caçamba aberta
+    px(x + 4, y + 28, l - 8, 2, AMARELO);
+    px(x + 6, y + 32, l - 12, 2, "#3a4458");      // estrias da caçamba
+    px(x + 6, y + 36, l - 12, 2, "#3a4458");
+    px(x + 6, y + 40, l - 12, 2, "#3a4458");
+  } else if (mod === "gtcoupe") {
+    // GT CUPÊ: baixo e largo, teto curto e curvo, asa grande e escape duplo
+    px(x + 2, y + 4, l - 4, a - 8, corBase);
+    px(x + 5, y, l - 10, a, corBase);
+    px(x + 2, y + 2, 2, a - 4, "#ffffff22");      // brilho lateral
+    px(x + 2, y + 10, 2, a - 26, AMARELO);       // filete fino (cupê não usa faixão)
+    px(x + l - 4, y + 10, 2, a - 26, AMARELO);
+    px(x + 5, y + 7, l - 10, 7, "#0e1420");       // para-brisa deitado
+    px(x + 6, y + 8, l - 12, 2, "#7fd3ff");
+    px(x + 7, y + 16, l - 14, 8, corBase);        // teto curto e curvo
+    px(x + 7, y + 16, l - 14, 2, "#00000055");
+    px(x + 6, y + a - 14, l - 12, 6, "#0e1420");   // vigia traseiro
+    px(x + 1, y + a - 7, l - 2, 3, "#0c0f14");    // asa grande
+    px(x + 3, y + a - 7, 4, 3, "#23262b");
+    px(x + l - 7, y + a - 7, 4, 3, "#23262b");
+    px(x + l / 2 - 5, y + 3, 4, 2, "#cfe8ff");    // full-LED dianteiro
+    px(x + l / 2 + 1, y + 3, 4, 2, "#cfe8ff");
+    px(x + l / 2 - 5, y + a - 3, 3, 2, "#3a3a3a"); // escape duplo
+    px(x + l / 2 + 2, y + a - 3, 3, 2, "#3a3a3a");
+  } else {
+    // SEDÃ padrão (CRUZE): carroceria e grafismo clássicos da PRF
+    px(x, y + 4, l, a - 8, corBase);
+    px(x + 3, y, l - 6, a, corBase);
+    px(x + 3, y + 2, 3, a - 4, "#ffffff1c");
+    // Faixas amarelas longitudinais nas laterais (grafismo PRF)
+    px(x, y + 10, 3, a - 26, AMARELO);
+    px(x + l - 3, y + 10, 3, a - 26, AMARELO);
+    // Chevron amarelo em diagonal sobre o capô
+    px(x + 6, y + 5, 6, 2, AMARELO);
+    px(x + 10, y + 3, 6, 2, AMARELO);
+    px(x + 14, y + 1, 6, 2, AMARELO);
+    // Vidros
+    px(x + 5, y + 8, l - 10, 9, "#0e1420");
+    px(x + 6, y + 9, l - 12, 3, "#2c405e");
+    px(x + 5, y + a - 16, l - 10, 8, "#0e1420");
+  }
 
   if (blindada) px(x + 4, y + 2, l - 8, 3, "#3a4458"); // grade reforçada
-  /* v2: detalhes por modelo novo (só visual, sem mudar colisão) */
-  if (opts.modelo === "interceptor") {
-    px(x + 2, y + a - 7, l - 4, 3, "#0c0f14");   // aerofólio traseiro
-    px(x + l / 2 - 1, y + 4, 2, a - 12, AMARELO); // faixa central esportiva
-  } else if (opts.modelo === "patrulheira") {
-    px(x + 4, y + a - 22, l - 8, 10, "#00000055"); // caçamba marcada
-    px(x + 4, y + a - 22, l - 8, 2, AMARELO);
-  } else if (opts.modelo === "gtcoupe") {
-    px(x + 2, y + a - 6, l - 4, 2, "#0c0f14");     // aerofólio baixo do cupê
-    px(x + l / 2 - 3, y + 3, 6, 3, AMARELO);       // capô com faixa dupla
-    px(x + l / 2 - 3, y + 6, 6, 2, AMARELO);
-    px(x + 3, y + 1, l - 6, 2, "#cfe8ff");         // full-LED dianteiro
-  }
 
   // Faróis e lanternas
   px(x + 3, y + 1, 5, 3, "#ffe9a8");
