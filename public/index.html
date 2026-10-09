@@ -2456,10 +2456,13 @@ const GEO = (() => {
 
 const POSTO = {
   viaturas: [
-    { x: 93, y: 428 },
-    { x: 197, y: 428 },
-    { x: 298, y: 428 },
-    { x: 398, y: 428 },   // 4º box: MOTO (só liberada se comprada)
+    { x: 93, y: 400 },
+    { x: 197, y: 400 },
+    { x: 298, y: 400 },
+    { x: 398, y: 400 },   // 4º box: MOTO (só liberada se comprada)
+    { x: 140, y: 480 },   // 5º box: INTERCEPTOR (novo)
+    { x: 240, y: 480 },   // 6º box: RANGER (novo)
+    { x: 340, y: 480 },   // 7º box: GT CUPÊ (novo)
   ],
   // totem removido
 };
@@ -10507,18 +10510,18 @@ function desenharPosto(tempo) {
   // ---------------- VIATURAS nos boxes do estacionamento ----------------
   // (alinhadas às vagas pintadas na arte de fundo)
   const skinV = viaturaAtual();
-  const labelY = 498;
   POSTO.viaturas.forEach((v, i) => {
     const mo = MODELOS_VIATURA[i];
     if (!mo) return;
+    const ly = v.y + 70;
     if (mo.tipo === "moto") {
       desenharMotoEm(v.x, v.y, { skin: skinV, fardaCores: fardaAtual().cores, luzes: "off" }, tempo);
-      texto("MOTO", v.x, labelY, "#cdd6e6", 6);
+      texto("MOTO", v.x, ly, "#cdd6e6", 6);
     } else {
       desenharViaturaEm(v.x, v.y, {
         luzes: "off", largura: mo.largura, altura: mo.altura, modelo: mo.id, skin: skinV,
       }, tempo);
-      texto(["SEDÃ", "SUV", "BLIND.", "MOTO", "TURBO", "PICK-UP"][i] || mo.nome, v.x, labelY, "#cdd6e6", 6);
+      texto(["SEDÃ", "SUV", "BLIND.", "MOTO", "TURBO", "PICK-UP", "GT"][i] || mo.nome, v.x, ly, "#cdd6e6", 6);
     }
   });
 
