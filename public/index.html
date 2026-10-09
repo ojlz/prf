@@ -558,7 +558,7 @@
     <p><b style="color:var(--amarelo)">1.</b> Clique em JOGAR AGORA — direto no navegador, sem cadastro.</p>
     <p><b style="color:var(--amarelo)">2.</b> Na rodovia, use <b>WASD</b> para dirigir, <b>ESPAÇO</b> para buzinar, e pare o veículo fiscalizado.</p>
     <p><b style="color:var(--amarelo)">3.</b> Ao se aproximar de um veículo, <b>clique na cena</b> para ler a situação e escolha a infração correta do CTB.</p>
-    <p><b style="color:var(--amarelo)">4.</b> Use <b>1-6</b> para itens da hotbar (radar, cone, K-9). <b>R</b> para rádio de ocorrência.</p>
+    <p><b style="color:var(--amarelo)">4.</b> Use <b>1-6</b> para itens da hotbar (radar, cone, K-9). <b>R</b> para rádio de ocorrência. <b>H</b> chama o helicóptero PRF (40 pts).</p>
     <p><b style="color:var(--amarelo)">5.</b> Acuse corretamente para ganhar pontos. Use os pontos para desbloquear fardas, viaturas e equipamentos!</p>
     <p style="text-align:center;margin-top:12px;color:#67779a;font-size:8px">CTB completo — 70+ situações reais de fiscalização. Treine para o concurso da PRF.</p>
   </div>
@@ -903,6 +903,9 @@
       <button class="opcao" id="btnTrocar0">TROCAR PARA: CRUZE (SEDÃ)</button>
       <button class="opcao" id="btnTrocar1">TROCAR PARA: TRAILBLAZER (SUV)</button>
       <button class="opcao" id="btnTrocar2">TROCAR PARA: SW4 BLINDADA</button>
+      <button class="opcao" id="btnTrocar3">TROCAR PARA: INTERCEPTOR (SEDÃ TURBO)</button>
+      <button class="opcao" id="btnTrocar4">TROCAR PARA: RANGER (PICK-UP)</button>
+      <button class="opcao" id="btnTrocar5">TROCAR PARA: GT CUPÊ (ESPORTIVO)</button>
     </div>
     <div class="acoes">
       <button class="botao" id="btnSairApoio">VOLTAR À BR</button>
@@ -1215,6 +1218,25 @@ const MODELOS_VIATURA = [
     descricao: ["MUITO RÁPIDA", "BAIXO CONSUMO", "SEM BLINDAGEM"],
     velMax: 598, aceleracao: 240, consumo: 0.6, blindagem: 0,
     largura: 18, altura: 40, pago: "moto_prf",
+  },
+  /* ===== VIATURAS v2 (originais, balanceadas p/ o meta atual) ===== */
+  {
+    id: "interceptor", nome: "INTERCEPTOR (SEDÃ TURBO)",
+    descricao: ["VELOCIDADE EXTREMA", "FREIO PRECISO", "SEM BLINDAGEM"],
+    velMax: 585, aceleracao: 235, consumo: 1.25, blindagem: 0,
+    largura: 32, altura: 56,
+  },
+  {
+    id: "patrulheira", nome: "RANGER (PICK-UP)",
+    descricao: ["BOA VELOCIDADE", "AGUENTA PISTA RUIM", "BLINDAGEM 2"],
+    velMax: 510, aceleracao: 180, consumo: 1.1, blindagem: 2,
+    largura: 36, altura: 59,
+  },
+  {
+    id: "gtcoupe", nome: "GT CUPÊ (ESPORTIVO)",
+    descricao: ["O MAIS RÁPIDO DO PÁTIO", "FREIO DE CERÂMICA", "BEBE MUITO"],
+    velMax: 622, aceleracao: 262, consumo: 1.45, blindagem: 0,
+    largura: 30, altura: 54,
   },
 ];
 
@@ -2361,6 +2383,13 @@ const TIPOS_OCORRENCIA = [
   { id: "pane",        texto: "Veículo em pane no acostamento pede apoio", tatica: false },
   { id: "criminosos",  texto: "GRAVE: Criminosos em fuga armados!", tatica: true },
   { id: "carro_forte", texto: "URGENTE: assalto a CARRO-FORTE em andamento na BR!", tatica: true },
+  /* ===== PACOTE DE OCORRÊNCIAS v2 (originais PRF na Estrada) ===== */
+  { id: "carga_derramada", texto: "Carga derramada na pista (caixas espalhadas)", tatica: false },
+  { id: "cavalo_solto",    texto: "Cavalo solto atravessando a pista", tatica: false },
+  { id: "onibus_escolar",  texto: "Ônibus escolar parado com embarque de alunos", tatica: false },
+  { id: "incendio_mata",   texto: "Foco de incêndio na vegetação às margens", tatica: false },
+  { id: "excesso_peso",    texto: "Caminhão com suspeita de excesso de peso pede fiscalização", tatica: false },
+  { id: "acidente_vitimas",texto: "Acidente com vítimas pede socorro no acostamento", tatica: false },
 ];
 
 /* ----------------------------------------------------------------
@@ -2462,6 +2491,7 @@ const estado = {
   k9Alvo: null,        // caminhão sob farejo do K-9
   k9Aberto: false,     // janela de decisão do K-9 aberta (pausa o mundo)
   k9: { x: 0, y: 0, modo: "heel", alvo: null, t: 0, achou: false },  // unidade canina (a pé)
+  heli: { ativo: false, x: 240, y: 180, t: 0, dur: 0 },  // apoio aéreo PRF (tecla H)
   blindagem: 0,
   combustivel: 100, alertaReserva: false,
   jogador: { x: 240, y: 530, largura: 34, altura: 58, vel: 0, vx: 0 },
@@ -2742,11 +2772,29 @@ function trechoDeTerra() {
   return pos >= inicioTerra &&
          pos <= fimTerra;
 }
+/* ===== NOVOS TRECHOS v2 (texturas procedurais originais) =====
+   OBRAS: ~1,2 km a cada 14 km — pista estreitada com cones, limite baixo.
+   SERRA (concreto): ~2,5 km a cada 18 km — concreto claro + defensas. */
+function trechoDeObras() {
+  if (trechoDeTerra()) return false;
+  const ciclo = CONFIG.pxPorKm * 14;
+  const pos = estado.distPx % ciclo;
+  return pos >= CONFIG.pxPorKm * 10 && pos <= CONFIG.pxPorKm * 11.2;
+}
+function trechoSerra() {
+  if (trechoDeTerra()) return false;
+  if (trechoDeObras()) return false;
+  const ciclo = CONFIG.pxPorKm * 18;
+  const pos = estado.distPx % ciclo;
+  return pos >= CONFIG.pxPorKm * 13 && pos <= CONFIG.pxPorKm * 15.5;
+}
 /* Trechos com linha CONTÍNUA amarela (proibido ultrapassar) */
 function faixaContinua() {
 
   if (trechoDeTerra())
     return false;
+  if (trechoDeObras()) return true;    // obras: ultrapassagem proibida
+  if (trechoSerra()) return true;      // serra: faixa contínua
   if (maoDupla())
     return false;
 
@@ -2777,7 +2825,7 @@ function maoDuplaEm(d) {
   const pos = (d + CONFIG.pxPorKm * 1.5) % ciclo;
   return pos >= CONFIG.pxPorKm * 2 && pos < CONFIG.pxPorKm * 4;
 }
-function maoDupla() { return !trechoDeTerra() && maoDuplaEm(estado.distPx); }
+function maoDupla() { return !trechoDeTerra() && !trechoDeObras() && !trechoSerra() && maoDuplaEm(estado.distPx); }
 
 function biomaAtual() {
 
@@ -3460,6 +3508,7 @@ window.addEventListener("keydown", (ev) => {
 
 }
   if (k === "k") { ev.preventDefault(); comandoK9(); }   // solta o cão K-9
+  if (k === "h") { ev.preventDefault(); if (typeof chamarHelicoptero === "function") chamarHelicoptero(); }   // apoio aéreo PRF
 });
 window.addEventListener("keyup", (ev) => {
   if (digitandoEmModal(ev)) return;
@@ -5253,6 +5302,7 @@ function iniciarTurno() {
   estado.alvo = null; estado.suspeitoArmado = null; estado.hostil = null;
   estado.carroForte = null;
   estado.objetoPista = null; estado.proposta = null;
+  if (estado.heli) { estado.heli.ativo = false; estado.heli.t = 0; }
   estado.decoracoes = [];
   estado.invuln = 0; estado.flashDano = 0; estado.flashEscudo = 0;
   estado.acidenteContagem = 0; estado.acidenteTempo = 0; estado.acidenteUltimo = 0; estado.acidenteProcessado = false; estado.wastedTimer = 0;
@@ -6362,6 +6412,78 @@ function atualizarK9(dt) {
   k.y += ((p.y + 10) - k.y) * Math.min(1, 9 * dt);
 }
 
+/* ===== HELICÓPTERO PRF — apoio aéreo (tecla H, 40 pts, 30s) =====
+   Original PRF na Estrada: sobrevoa a viatura, holofote à noite e
+   pressiona fugitivos (reduz o teto de fuga enquanto ativo). */
+const CUSTO_HELI = 40, DUR_HELI = 30;
+function chamarHelicoptero() {
+  const h = estado.heli;
+  const emVoo = [ESTADOS.PATRULHA, ESTADOS.PERSEGUICAO, ESTADOS.ENCOSTANDO, ESTADOS.COMBATE_VEICULAR].includes(estado.modo);
+  if (!emVoo) { avisar("Helicóptero só pode ser acionado em patrulha.", 4); return; }
+  if (h.ativo) { avisar("Helicóptero PRF já está no ar.", 3); return; }
+  if (estado.pontos < CUSTO_HELI) { avisar(`Helicóptero precisa de ${CUSTO_HELI} pontos (apoio aéreo).`, 4, true); return; }
+  estado.pontos -= CUSTO_HELI;
+  h.ativo = true; h.t = 0; h.dur = DUR_HELI;
+  h.x = estado.jogador.x; h.y = 140;
+  som("pop");
+  avisar("🚁 Helicóptero PRF no ar! Apoio aéreo por 30s (H).", 5, true);
+}
+function atualizarHeli(dt) {
+  const h = estado.heli;
+  if (!h.ativo) return;
+  h.t += dt;
+  // Segue a viatura com atraso suave + balanço de voo
+  const jx = (estado.jogador && estado.jogador.x) || 240;
+  h.x += (jx + 60 - h.x) * Math.min(1, 2.2 * dt);
+  h.y = 140 + Math.sin(h.t * 1.8) * 10;
+  // Pressiona fugitivo: teto de fuga cai enquanto o heli ilumina
+  const a = estado.alvo;
+  if (a && a.modoAlvo === "fugindo") {
+    a.vel = Math.max(60, a.vel - 55 * dt);
+    if (Math.random() < dt * 0.5) flutuarTexto(a.x, a.y - 10, "🚁", "#7db2ff");
+  }
+  if (h.t >= h.dur) { h.ativo = false; avisar("Helicóptero PRF recolhido à base.", 4); }
+}
+function desenharHelicoptero(tempo) {
+  const h = estado.heli;
+  if (!h.ativo) return;
+  const x = h.x, y = h.y;
+  const rot = Math.floor((tempo || 0) * 18) % 2 === 0;
+  // Sombra no chão
+  ctx.fillStyle = "rgba(0,0,0,0.30)";
+  ctx.beginPath(); ctx.ellipse(estado.jogador.x + 40, estado.jogador.y + 10, 26, 8, 0, 0, Math.PI * 2); ctx.fill();
+  // Holofote à noite em direção à viatura
+  const n = (typeof fatorNoite === "function") ? fatorNoite() : 0;
+  if (n > 0.25) {
+    ctx.save();
+    ctx.fillStyle = `rgba(255,250,200,${0.10 + 0.10 * n})`;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 8);
+    ctx.lineTo(estado.jogador.x - 20, estado.jogador.y);
+    ctx.lineTo(estado.jogador.x + 20, estado.jogador.y);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  // Rotor (alterna para simular giro)
+  px(x - 26, y - 8, 52, 3, rot ? "#c7ccd2" : "#8a929c");
+  px(x - 2, y - 14, 4, 6, "#3a4148");
+  // Cauda + patins
+  px(x + 8, y - 6, 22, 4, "#1c2950");
+  px(x + 28, y - 10, 4, 8, "#1c2950");
+  px(x - 12, y + 8, 8, 2, "#3a4148");
+  px(x + 4, y + 8, 8, 2, "#3a4148");
+  // Cabine PRF azul com faixa amarela
+  px(x - 14, y - 6, 28, 14, "#1c2950");
+  px(x - 14, y - 1, 28, 4, "#f6c63e");
+  px(x - 10, y - 5, 12, 5, "#0e1420");
+  px(x - 9, y - 4, 10, 2, "#7fd3ff");
+  texto("PRF", x, y + 4, "#f6c63e", 5);
+  if (Math.floor((tempo || 0) * 2) % 2 === 0) {
+    px(x - 14, y - 6, 3, 3, "#ff4040");
+    px(x + 11, y - 6, 3, 3, "#357dff");
+  }
+}
+
 /* ----------------------------------------------------------------
    10. CONFRONTO A PÉ + PARCEIRO
    ---------------------------------------------------------------- */
@@ -6778,10 +6900,17 @@ function responderProposta(aceitou) {
     pedestre:    { largura: 14, altura: 20 },
     animal_vivo: { largura: 22, altura: 14 },
     pane:        { largura: 32, altura: 54 },
+    carga_derramada: { largura: 34, altura: 22 },
+    cavalo_solto:    { largura: 26, altura: 18 },
+    onibus_escolar:  { largura: 36, altura: 62 },
+    incendio_mata:   { largura: 30, altura: 24 },
+    excesso_peso:    { largura: 34, altura: 58 },
+    acidente_vitimas:{ largura: 34, altura: 30 },
   }[tipo.id] || { largura: 26, altura: 18 };
+  const NO_ACOSTAMENTO = new Set(["pane", "incendio_mata", "acidente_vitimas", "excesso_peso", "onibus_escolar"]);
   estado.objetoPista = {
     tipo: tipo.id, texto: tipo.texto,
-    x: tipo.id === "pane"
+    x: NO_ACOSTAMENTO.has(tipo.id)
       ? GEO.acostamentoDireito
       : GEO.centros[Math.floor(Math.random() * CONFIG.numFaixas)],
     y: -1300, ...dims,
@@ -6856,6 +6985,32 @@ function atualizarQuilometragem() {
       estado.postoApoio = { y: -800, usado: false, lado };
       estado.decoracoes.push({ tipo: "placaServico", lado, y: -80, texto: "BASE PRF" });
     }
+    // Avisos de trecho v2: placa ~900px antes de entrar em OBRAS/SERRA
+    try {
+      const ahead = 900;
+      const emOb = typeof trechoDeObras === "function" && trechoDeObras();
+      const emSe = typeof trechoSerra === "function" && trechoSerra();
+      if (!emOb) {
+        const salva = estado.distPx;
+        estado.distPx = salva + ahead;
+        const vaiObra = typeof trechoDeObras === "function" && trechoDeObras();
+        estado.distPx = salva;
+        if (vaiObra && !estado._placaObra) {
+          estado._placaObra = true;
+          estado.decoracoes.push({ tipo: "placaServico", lado: "dir", y: -80, texto: "OBRAS 40" });
+        } else if (!vaiObra) estado._placaObra = false;
+      }
+      if (!emSe) {
+        const salva = estado.distPx;
+        estado.distPx = salva + ahead;
+        const vaiSerra = typeof trechoSerra === "function" && trechoSerra();
+        estado.distPx = salva;
+        if (vaiSerra && !estado._placaSerra) {
+          estado._placaSerra = true;
+          estado.decoracoes.push({ tipo: "placaServico", lado: "dir", y: -80, texto: "SERRA" });
+        } else if (!vaiSerra) estado._placaSerra = false;
+      }
+    } catch (_e) {}
   }
 }
 
@@ -7036,7 +7191,9 @@ document.getElementById("btnSairOficina").addEventListener("click", () => {
 const overlayApoio = document.getElementById("overlayApoio");
 const infoApoio = document.getElementById("infoApoio");
 const btnContratarParceiro = document.getElementById("btnContratarParceiro");
-const btnsTrocar = [0, 1, 2].map((i) => document.getElementById("btnTrocar" + i));
+/* v2: 6 botões de troca — pula a MOTO (índice 3, item pago). */
+const MAPA_TROCA = [0, 1, 2, 4, 5, 6];
+const btnsTrocar = MAPA_TROCA.map((_, i) => document.getElementById("btnTrocar" + i));
 function abrirMenuApoio() {
   som("pop");
   estado.modo = ESTADOS.POSTO_APOIO;
@@ -7053,7 +7210,10 @@ function atualizarTextoApoio() {
   btnContratarParceiro.disabled =
     estado.numParceiros >= CONFIG.maxParceiros || estado.pontos < CONFIG.custoParceiro;
   btnsTrocar.forEach((b, i) => {
-    b.disabled = MODELOS_VIATURA[i] === estado.modelo;
+    if (!b) return;
+    const mi = MAPA_TROCA[i];
+    b.disabled = MODELOS_VIATURA[mi] === estado.modelo;
+    if (MODELOS_VIATURA[mi]) b.textContent = "TROCAR PARA: " + MODELOS_VIATURA[mi].nome;
   });
 }
 btnContratarParceiro.addEventListener("click", () => {
@@ -7064,9 +7224,11 @@ btnContratarParceiro.addEventListener("click", () => {
   atualizarTextoApoio();
 });
 btnsTrocar.forEach((b, i) => {
+  if (!b) return;
   b.addEventListener("click", () => {
-    if (MODELOS_VIATURA[i] === estado.modelo) return;
-    estado.modelo = MODELOS_VIATURA[i];
+    const mi = MAPA_TROCA[i];
+    if (MODELOS_VIATURA[mi] === estado.modelo) return;
+    estado.modelo = MODELOS_VIATURA[mi];
     // mantém a blindagem ATUAL (clampa ao máximo do novo modelo) — sem cura grátis
     estado.blindagem = Math.min(estado.blindagem, estado.modelo.blindagem);
     estado.jogador.largura = estado.modelo.largura;
@@ -7310,6 +7472,7 @@ function atualizar(dt) {
     estado.proposta.tempo -= dt;
     if (estado.proposta.tempo <= 0) responderProposta(false);
   }
+  if (typeof atualizarHeli === "function") atualizarHeli(dt);
   atualizarAudioAmbiente(dt);
 
   if (estado.wastedTimer > 0) {
@@ -7359,16 +7522,22 @@ function atualizar(dt) {
   if (dirigindo) {
     const naChuva = chovendo();
     const naTerra = trechoDeTerra();
+    const emObras = typeof trechoDeObras === "function" && trechoDeObras();
+    const naSerra = typeof trechoSerra === "function" && trechoSerra();
     //if (naTerra && !estado.emTerra) avisar("TRECHO DE ESTRADA DE TERRA: aderência e velocidade reduzidas!");
     estado.emTerra = naTerra;
+    if (emObras && !estado._avisoObras) { estado._avisoObras = true; avisar("OBRAS NA PISTA! Velocidade reduzida e ultrapassagem proibida.", 5); }
+    if (!emObras) estado._avisoObras = false;
+    if (naSerra && !estado._avisoSerra) { estado._avisoSerra = true; avisar("TRECHO DE SERRA (concreto): pista clara, faixa contínua — sem ultrapassar.", 5); }
+    if (!naSerra) estado._avisoSerra = false;
 
-    const freioEf = freioAtual() * (naChuva ? 0.38 : 1) * (naTerra ? 0.7 : 1);
-    const atritoEf = CONFIG.atrito * (naChuva ? 0.5 : 1) * (naTerra ? 2.4 : 1);
+    const freioEf = freioAtual() * (naChuva ? 0.38 : 1) * (naTerra ? 0.7 : 1) * (emObras ? 1.15 : 1);
+    const atritoEf = CONFIG.atrito * (naChuva ? 0.5 : 1) * (naTerra ? 2.4 : 1) * (emObras ? 1.6 : 1);
 
-    if (teclas.cima)  j.vel += acelAtual() * (naChuva ? 0.8 : 1) * (naTerra ? 0.85 : 1) * dt;
+    if (teclas.cima)  j.vel += acelAtual() * (naChuva ? 0.8 : 1) * (naTerra ? 0.85 : 1) * (emObras ? 0.75 : 1) * dt;
     if (teclas.baixo) j.vel -= freioEf * dt;
     if (!teclas.cima && !teclas.baixo) j.vel -= atritoEf * dt;
-    const tetoVel = velMaxAtual() * (naTerra ? 0.82 : 1);
+    const tetoVel = velMaxAtual() * (naTerra ? 0.82 : 1) * (emObras ? 0.62 : 1) * (naSerra ? 0.92 : 1);
     const noAcostamento = Math.abs(j.x - GEO.acostamentoDireito) < 22 || Math.abs(j.x - GEO.acostamentoEsquerdo) < 22;
     if (noAcostamento) estado.timerRe = 1.5;
     if (j.vel <= 0 && estado.timerRe > 0 && teclas.baixo) {
@@ -7522,18 +7691,26 @@ function atualizar(dt) {
       o.x += o.sentido * 30 * dt;
       const minX = GEO.inicioAsfalto + 12, maxX = GEO.inicioAsfalto + GEO.larguraPista - 12;
       if (o.x < minX || o.x > maxX) o.sentido *= -1;
+    } else if (o.tipo === "cavalo_solto") {
+      // Cavalo assustado: cruza mais rápido e em zigue-zague
+      o.x += o.sentido * 46 * dt;
+      o.y += Math.sin(estado.tempoMundo * 3.1) * 22 * dt;
+      const minX = GEO.inicioAsfalto + 12, maxX = GEO.inicioAsfalto + GEO.larguraPista - 12;
+      if (o.x < minX || o.x > maxX) o.sentido *= -1;
     } else if (o.tipo === "pedestre") {
       o.x += Math.sin(estado.tempoMundo * 0.9) * 14 * dt;
     }
-    // Se um CIVIL atingir a capivara antes do resgate, ela morre:
+    // Se um CIVIL atingir a capivara/cavalo antes do resgate, ele morre:
     // o agente perde pontos por não ter agido a tempo
-    if (o.tipo === "animal_vivo") {
+    if (o.tipo === "animal_vivo" || o.tipo === "cavalo_solto") {
       for (const v of estado.veiculos) {
         if (v.contramaoNPC) continue;
         if (intersecta(caixaVeiculo(v), caixaVeiculo(o))) {
           estado.pontos = Math.max(0, estado.pontos - 60);
           tocarBonk();
-          avisar("A capivara foi atropelada por um civil! Aja mais rápido (-60)", 5);
+          avisar(o.tipo === "cavalo_solto"
+            ? "O cavalo foi atropelado por um civil! Aja mais rápido (-60)"
+            : "A capivara foi atropelada por um civil! Aja mais rápido (-60)", 5);
           estado.objetoPista = null;
           break;
         }
@@ -7753,6 +7930,8 @@ function desenharCenario() {
   for (const d of estado.decoracoes) if (!decoracaoEscondida(d)) desenharDecoracao(d);
 
   const naTerra = trechoDeTerra();
+  const emObras = typeof trechoDeObras === "function" && trechoDeObras();
+  const naSerra = typeof trechoSerra === "function" && trechoSerra();
   if (naTerra) {
     // ESTRADA DE TERRA: leito marrom, trilhas de pneu e pedriscos
     px(margemGrama, yTopo, larguraAcostamento, altPista, "#7a6648");
@@ -7818,6 +7997,59 @@ function desenharCenario() {
         }
       }
     }
+  }
+
+  // ===== SOBREPOSIÇÃO v2: OBRAS + SERRA (texturas procedurais) =====
+  if (emObras) {
+    // Asfalto remendado: manchas escuras + faixa zebrada no acostamento esq.
+    for (let i = 0; i < 14; i++) {
+      const yBase = yTopo + ((i * 211 + Math.floor(desloc * 1.0)) % altPista);
+      px(GEO.inicioAsfalto + 12 + ((i * 89) % (GEO.larguraPista - 40)), yBase, 22, 10, "#2b2e33");
+      px(GEO.inicioAsfalto + 16 + ((i * 89) % (GEO.larguraPista - 40)), yBase + 2, 14, 6, "#23262b");
+    }
+    // Zebrado do acostamento esquerdo (área bloqueada)
+    for (let y = yTopo - 40 + (desloc % 40); y < yTopo + altPista; y += 40) {
+      px(margemGrama + 4, y, larguraAcostamento - 8, 10, "#e8d44a");
+      px(margemGrama + 4, y + 10, larguraAcostamento - 8, 10, "#34373c");
+    }
+    // Fileira de cones no limite da área de obras
+    const xCones = margemGrama + larguraAcostamento + 8;
+    for (let y = yTopo - 60 + (desloc % 90); y < yTopo + altPista; y += 90) {
+      px(xCones, y, 8, 12, "#ff6a2e");
+      px(xCones + 1, y + 3, 6, 4, "#ffffff");
+      px(xCones - 2, y + 12, 12, 3, "#7a3a1a");
+    }
+    // Placa OBRAS fixa no canto da pista
+    px(GEO.inicioAsfalto + 8, yTopo + 60, 46, 24, "#e8a23c");
+    ctx.strokeStyle = "#1c1208"; ctx.lineWidth = 2;
+    ctx.strokeRect(GEO.inicioAsfalto + 10, yTopo + 62, 42, 20);
+    texto("OBRAS", GEO.inicioAsfalto + 31, yTopo + 72, "#1c1208", 6);
+    texto("40", GEO.inicioAsfalto + 31, yTopo + 82, "#1c1208", 6);
+  }
+  if (naSerra) {
+    // Pista de CONCRETO claro com ranhuras transversais
+    const corConcreto = chovendo() ? "#7e8287" : "#8f938e";
+    px(GEO.inicioAsfalto, yTopo, GEO.larguraPista, altPista, corConcreto);
+    for (let y = yTopo - 24 + (desloc % 24); y < yTopo + altPista; y += 24) {
+      px(GEO.inicioAsfalto, y, GEO.larguraPista, 2, "#6f7378");
+    }
+    for (let i = 0; i < 20; i++) {
+      const yBase = yTopo + ((i * 179 + Math.floor(desloc)) % altPista);
+      px(GEO.inicioAsfalto + ((i * 53) % (GEO.larguraPista - 4)), yBase, 3, 2, "#a8aca7");
+    }
+    // Defensa metálica nas duas margens
+    px(0, yTopo, margemGrama, altPista, "#3a4148");
+    px(larguraTela - margemGrama, yTopo, margemGrama, altPista, "#3a4148");
+    px(8, yTopo, margemGrama - 16, altPista, "#9aa3ad");
+    px(larguraTela - margemGrama + 8, yTopo, margemGrama - 16, altPista, "#9aa3ad");
+    for (let y = yTopo - 32 + (desloc % 32); y < yTopo + altPista; y += 32) {
+      px(10, y, margemGrama - 20, 6, "#c7ccd2");
+      px(larguraTela - margemGrama + 10, y, margemGrama - 20, 6, "#c7ccd2");
+    }
+    // Faixa central AMARELA dupla (serra = fluxos separados / sem ultrapassar)
+    const xC = GEO.inicioAsfalto + GEO.larguraFaixa - 2;
+    px(xC - 4, yTopo, 3, altPista, "#e8d44a");
+    px(xC + 2, yTopo, 3, altPista, "#e8d44a");
   }
 
   // PARADAS (sprites) — desenhadas por cima do chão para a entrada de terra
@@ -8896,6 +9128,19 @@ function desenharViaturaEm(cx, cy, opts, tempo) {
   px(x + 5, y + a - 16, l - 10, 8, "#0e1420");
 
   if (blindada) px(x + 4, y + 2, l - 8, 3, "#3a4458"); // grade reforçada
+  /* v2: detalhes por modelo novo (só visual, sem mudar colisão) */
+  if (opts.modelo === "interceptor") {
+    px(x + 2, y + a - 7, l - 4, 3, "#0c0f14");   // aerofólio traseiro
+    px(x + l / 2 - 1, y + 4, 2, a - 12, AMARELO); // faixa central esportiva
+  } else if (opts.modelo === "patrulheira") {
+    px(x + 4, y + a - 22, l - 8, 10, "#00000055"); // caçamba marcada
+    px(x + 4, y + a - 22, l - 8, 2, AMARELO);
+  } else if (opts.modelo === "gtcoupe") {
+    px(x + 2, y + a - 6, l - 4, 2, "#0c0f14");     // aerofólio baixo do cupê
+    px(x + l / 2 - 3, y + 3, 6, 3, AMARELO);       // capô com faixa dupla
+    px(x + l / 2 - 3, y + 6, 6, 2, AMARELO);
+    px(x + 3, y + 1, l - 6, 2, "#cfe8ff");         // full-LED dianteiro
+  }
 
   // Faróis e lanternas
   px(x + 3, y + 1, 5, 3, "#ffe9a8");
@@ -9564,6 +9809,77 @@ function desenharObjetoPista(o, tempo) {
     desenharPessoa(o.x - o.largura / 2 - 10, y + 20, "#2c5a3a");
     return;
   }
+  if (o.tipo === "carga_derramada") {
+    // Caixas espalhadas + faixa zebrada improvisada
+    px(x, y + 10, o.largura, 3, "#ffd23f");
+    px(x + 2, y + 2, 10, 8, "#b07a3a");
+    px(x + 14, y + 4, 9, 7, "#8a5f2e");
+    px(x + 6, y + 12, 11, 8, "#c49a5a");
+    px(x + 20, y + 11, 10, 9, "#7a5f3a");
+    px(x + 4, y + 4, 6, 2, "#3a2a1a");
+    return;
+  }
+  if (o.tipo === "cavalo_solto") {
+    // Cavalo marrom de perfil, crina escura
+    const dir = o.sentido || 1;
+    px(x + 2, y + 6, 16, 7, "#6e4f30");
+    px(dir > 0 ? x + 17 : x - 1, y + 2, 7, 7, "#6e4f30");
+    px(dir > 0 ? x + 22 : x - 1, y + 4, 2, 3, "#3a2a1a");
+    px(x + 6, y + 2, 9, 4, "#3a2a1a");
+    px(x + 4, y + 13, 3, 4, "#5e4630");
+    px(x + 14, y + 13, 3, 4, "#5e4630");
+    if (Math.floor((tempo || 0) * 2) % 2 === 0) texto("!", o.x, y - 6, "#ffd23f", 8);
+    return;
+  }
+  if (o.tipo === "onibus_escolar") {
+    // Micro-ônibus amarelo parado + triângulo + crianças embarcando
+    px(x + 2, y + o.altura - 2, o.largura - 4, 3, "#00000044");
+    px(x, y + 4, o.largura, o.altura - 8, "#d8a93c");
+    px(x + 3, y, o.largura - 6, o.altura, "#d8a93c");
+    px(x + 5, y + 10, o.largura - 10, 10, "#1b2330");
+    px(x + 5, y + 24, o.largura - 10, 4, "#1c2950");
+    texto("ESCOLAR", o.x, y + 28, "#1c2950", 5);
+    if (Math.floor((tempo || 0) * 3) % 2 === 0) {
+      px(x + 2, y + 1, 5, 3, "#ff9d2e");
+      px(x + o.largura - 7, y + 1, 5, 3, "#ff9d2e");
+    }
+    desenharPessoa(o.x - o.largura / 2 - 10, y + 34, "#2c5a8a");
+    desenharPessoa(o.x - o.largura / 2 - 16, y + 44, "#8a2c2c");
+    return;
+  }
+  if (o.tipo === "incendio_mata") {
+    // Foco de incêndio na margem: chamas + fumaça
+    const f = Math.floor((tempo || 0) * 6) % 2 === 0;
+    px(x + 4, y + 12, 22, 8, "#3a3a2a");
+    px(x + 8, y + 6, 5, 10, f ? "#ff7a2e" : "#ffb02e");
+    px(x + 14, y + 4, 6, 12, f ? "#ffb02e" : "#ff7a2e");
+    px(x + 21, y + 7, 4, 9, "#ff3a2e");
+    px(x + 10, y - 4, 12, 6, "#55555599");
+    if (Math.floor((tempo || 0) * 2) % 2 === 0) texto("!", o.x, y - 8, "#ff7a2e", 8);
+    return;
+  }
+  if (o.tipo === "excesso_peso") {
+    // Caminhão afundado (suspensão baixa) + balança simbólica
+    px(x + 2, y + o.altura - 2, o.largura - 4, 3, "#00000044");
+    px(x, y + 4, o.largura, o.altura - 8, "#5a6e8a");
+    px(x + 3, y, o.largura - 6, o.altura, "#5a6e8a");
+    px(x + 5, y + 8, o.largura - 10, 9, "#1b2330");
+    px(x + 4, y + o.altura - 12, 6, 6, "#1c1f24");
+    px(x + o.largura - 10, y + o.altura - 12, 6, 6, "#1c1f24");
+    texto("PESO?", o.x, y + o.altura / 2 + 6, "#ffd23f", 6);
+    return;
+  }
+  if (o.tipo === "acidente_vitimas") {
+    // Dois carros colididos + cruz de socorro
+    px(x, y + 8, 16, 14, "#8a2c2c");
+    px(x + 16, y + 6, 16, 16, "#2c5a8a");
+    px(x + 6, y + 4, 20, 6, "#333333");
+    px(x + 2, y - 6, 8, 8, "#ffffff");
+    px(x + 4, y - 4, 4, 4, "#ff3a3a");
+    desenharPessoa(o.x + 14, y + 26, "#e8ecf4");
+    if (Math.floor((tempo || 0) * 2) % 2 === 0) texto("SOS", o.x, y - 10, "#ff5d5d", 7);
+    return;
+  }
   if (o.tipo === "animal") {
     px(x + 2, y + 4, 20, 10, "#7a5a3a");
     px(x, y + 6, 5, 5, "#7a5a3a");
@@ -10202,7 +10518,7 @@ function desenharPosto(tempo) {
       desenharViaturaEm(v.x, v.y, {
         luzes: "off", largura: mo.largura, altura: mo.altura, modelo: mo.id, skin: skinV,
       }, tempo);
-      texto(["SEDÃ", "SUV", "BLIND."][i], v.x, labelY, "#cdd6e6", 6);
+      texto(["SEDÃ", "SUV", "BLIND.", "MOTO", "TURBO", "PICK-UP"][i] || mo.nome, v.x, labelY, "#cdd6e6", 6);
     }
   });
 
@@ -10292,6 +10608,7 @@ function renderizar(tempo) {
   desenharPoliciais(tempo);
   desenharBalas();
   desenharEfeitosMundo();
+  if (typeof desenharHelicoptero === "function") desenharHelicoptero(tempo);
   ctx.restore();
 
   desenharAmbiente();
