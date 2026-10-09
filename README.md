@@ -1,6 +1,6 @@
 # PRF na Estrada — Simulador Educacional (CTB)
 
-🌐 **Jogue no ar:** https://prfgame.vercel.app
+🌐 **Jogue no ar:** https://prfbr.vercel.app
 
 Jogo de simulador/quiz 100% no navegador, sem cadastro: patrulhe a BR,
 enquadre infrações do CTB, ganhe pontos e desbloqueie fardas, viaturas e
